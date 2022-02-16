@@ -30,9 +30,9 @@ for child in root:
     depth = 0
     for cat in catPath:
         if catPathStr != '':
-            catPathStr = catPathStr + ' > '
-        catPathStr = catPathStr + cat.find('name').text
-        depth = depth + 1
+            catPathStr += ' > '
+        catPathStr += cat.find('name').text
+        depth += 1
         if maxDepth > 0 and depth == maxDepth:
             break
     catDict[leafCat] = catPathStr

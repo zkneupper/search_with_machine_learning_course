@@ -139,7 +139,7 @@ def get_entities(named_entities, entity_types):
         if isinstance(ent, tuple):
             e_type = ent[1]
             if e_type in entity_types:
-                result += ent[0] + " "
+                result += f'{ent[0]} '
         elif isinstance(ent, nltk.Tree):
             if ent.label() in entity_types:
                 # these are tuples, we want all of them, but just the first part

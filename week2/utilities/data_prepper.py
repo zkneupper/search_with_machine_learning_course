@@ -163,13 +163,15 @@ class DataPrepper:
                         # print("Name: {}\n\nDesc: {}\n".format(hit['_source']['name'], hit['_source']['shortDescription']))
 
                     #print("\tQ[%s]: %s clicked" % (query_id, total_clicked_docs_per_query))
+                elif response and (
+                    response['hits']['hits'] is None
+                    or len(response['hits']['hits']) == 0
+                ):
+                    print("No results for query: %s" % key)
+                    no_results.add(key)
                 else:
-                    if response and (response['hits']['hits'] == None or len(response['hits']['hits']) == 0):
-                        print("No results for query: %s" % key)
-                        no_results.add(key)
-                    else:
-                        print(response)
-                        print("Invalid response for query %s" % query_obj)
+                    print(response)
+                    print("Invalid response for query %s" % query_obj)
         print("Zero results queries: %s" % no_results)
         impressions_df = pd.DataFrame({
             "query_id": query_ids_list,
@@ -191,12 +193,10 @@ class DataPrepper:
         feature_frames = []
         query_gb = train_data_df.groupby("query")
         no_results = {}
-        ctr = 0
         #print("Number queries: %s" % query_gb.count())
-        for key in query_gb.groups.keys():
+        for ctr, key in enumerate(query_gb.groups.keys()):
             if ctr % 500 == 0:
                 print("Progress[%s]: %s" % (ctr, key))
-            ctr += 1
             # get all the docs ids for this query
             group = query_gb.get_group(key)
             doc_ids = group.doc_id.values
@@ -209,9 +209,7 @@ class DataPrepper:
             if ltr_feats_df is not None:
                 feature_frames.append(ltr_feats_df)
 
-        features_df = None
-        if len(feature_frames) > 0:
-            features_df = pd.concat(feature_frames)
+        features_df = pd.concat(feature_frames) if feature_frames else None
         print("The following queries produced no results: %s" % no_results)
         return features_df
 
@@ -236,12 +234,14 @@ class DataPrepper:
         print("IMPLEMENT ME: __log_ltr_query_features: Extract log features out of the LTR:EXT response and place in a data frame")
         # Loop over the hits structure returned by running `log_query` and then extract out the features from the response per query_id and doc id.  Also capture and return all query/doc pairs that didn't return features
         # Your structure should look like the data frame below
-        feature_results = {}
-        feature_results["doc_id"] = []  # capture the doc id so we can join later
-        feature_results["query_id"] = []  # ^^^
-        feature_results["sku"] = []
-        feature_results["salePrice"] = []
-        feature_results["name_match"] = []
+        feature_results = {
+            'doc_id': [],
+            'query_id': [],
+            'sku': [],
+            'salePrice': [],
+            'name_match': [],
+        }
+
         rng = np.random.default_rng(12345)
         for doc_id in query_doc_ids:
             feature_results["doc_id"].append(doc_id)  # capture the doc id so we can join later
@@ -264,8 +264,7 @@ class DataPrepper:
                 # get the field
                 funcs = func_temp.get("functions",
                                       [func_temp.get("field_value_factor")])  # could also be a field_value_factor alone
-                for func in funcs:
-                    agg_fields.append(func['field_value_factor']['field'])
+                agg_fields.extend(func['field_value_factor']['field'] for func in funcs)
         stats_query = qu.create_stats_query(agg_fields)
         try:
             response = self.opensearch.search(stats_query, self.index_name)

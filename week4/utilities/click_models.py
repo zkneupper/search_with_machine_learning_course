@@ -3,14 +3,12 @@ import pandas as pd
 import numpy as np
 
 def binary_func(x):
-    if x > 0:
-        return 1
-    return 0
+    return 1 if x > 0 else 0
 
 def step(x):
     if x < 0.05: return 0
-    elif x >= 0.05 and x < 0.10: return 0.5
-    elif x >= 0.10 and x < 0.3: return 0.75
+    elif x < 0.10: return 0.5
+    elif x < 0.3: return 0.75
     else: return 1
 
 

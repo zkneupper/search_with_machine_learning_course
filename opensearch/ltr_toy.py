@@ -138,7 +138,7 @@ print("We indexed:\n{}".format(client.cat.count(index_name, params={"v": "true"}
 
 # Turn on the LTR store and name it the same as our index
 ltr_store_name = index_name
-ltr_store_path = "_ltr/" + ltr_store_name
+ltr_store_path = f'_ltr/{ltr_store_name}'
 
 print("Create our LTR store")
 # LTR requests are not supported by the OpenSearchPy client, so we will drop down to using Python's Requests library
@@ -157,7 +157,10 @@ print("\tCreate the new store response status: %s" % resp.status_code)
 #######################
 featureset_name = "ltr_toy"
 headers = {"Content-Type": 'application/json'}
-featureset_path = urljoin(ltr_model_path + "/", "_featureset/{}".format(featureset_name))
+featureset_path = urljoin(
+    f'{ltr_model_path}/', "_featureset/{}".format(featureset_name)
+)
+
 # Upload our feature set to our model
 body_query_feature_name = "body_query"
 title_query_feature_name = "title_query"
@@ -238,7 +241,7 @@ queries = {1: "dogs", 2: "red fox", 3: "wolf huffed AND puffed OR pig"}
 judgments = {}
 
 # Loop over queries, execute a search
-for query in queries:
+for query, value in queries.items():
     # Used to get the original queries to create the judgments
     query_obj = {
         'size': 5,
@@ -249,7 +252,12 @@ for query in queries:
             }
         }
     }
-    print("################\nExecuting search: qid: {}; query: {}\n##########".format(query, queries[query]))
+    print(
+        "################\nExecuting search: qid: {}; query: {}\n##########".format(
+            query, value
+        )
+    )
+
     response = client.search(body=query_obj, index=index_name)
     hits = response['hits']['hits']
     if len(hits) > 0:
@@ -266,16 +274,16 @@ for query in queries:
             input = ""
             for input in sys.stdin.readline():
                 grade = input.rstrip()
-                if grade == "0" or grade == "1":
+                if grade in ["0", "1"]:
                     judgment = Judgment(query, hit['_id'], hit['_source']['title'], int(grade))
                     judge_vals.append(judgment)
                     break
-                elif grade == "skip" or grade == "s":
+                elif grade in ["skip", "s"]:
                     break
-                elif grade == "exit" or grade == 'e':
+                elif grade in ["exit", 'e']:
                     input = grade  # set this back to the trimmed grade so we can exit the outer loop.  Very clunky!
                     break
-            if input == "exit" or input == "e":
+            if input in ["exit", "e"]:
                 break  # break out of hits, this is ugly, but OK for what we are doing here
 
 #######################
@@ -285,11 +293,11 @@ for query in queries:
 #######################
 # Coming out of this loop, we should have an array of judgments
 train_file = tempfile.NamedTemporaryFile(delete=False)
+# create a new SLTR query with an appropriate filter query
+doc_ids = []
 # Log our features by sending our query and it's judged documents to OpenSearch
-for (idx, item) in enumerate(judgments.items()):
+for item in judgments.items():
     judge_vals = item[1]
-    # create a new SLTR query with an appropriate filter query
-    doc_ids = []
     for judgment in judge_vals:
         # Note: we are executing one query per judgment doc id here because it's easier, but we could do this
         # by adding all the doc ids for this query and scoring them all at once and cut our number of queries down
@@ -391,7 +399,7 @@ os_model = {
 #
 #######################
 # Upload the model to OpenSearch
-model_path = urljoin(featureset_path + "/", "_createmodel")
+model_path = urljoin(f'{featureset_path}/', "_createmodel")
 print("Uploading our model to %s" % model_path)
 response = requests.post(model_path, data=json.dumps(os_model), headers=headers, auth=auth, verify=False)
 print("\tResponse: %s" % response)

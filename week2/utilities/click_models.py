@@ -3,9 +3,7 @@ import pandas as pd
 import numpy as np
 
 def binary_func(x):
-    if x > 0:
-        return 1
-    return 0
+    return 1 if x > 0 else 0
 
 def step(x):
     print("IMPLEMENT ME: step(x) a step function with a simple heuristic that buckets grades")
