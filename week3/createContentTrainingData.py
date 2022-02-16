@@ -64,7 +64,7 @@ with open(output_file, 'w') as output:
                       # Replace newline chars with spaces so fastText doesn't complain
                       name = child.find('name').text.replace('\n', ' ')
                       output.write("__label__%s %s\n" % (cat, transform_name(name)))
-                total_input = total_input + 1
+                total_input += 1
                 # Terminate early if max_input is specified and reached.
                 if total_input == max_input:
                     break

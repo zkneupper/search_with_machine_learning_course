@@ -165,13 +165,15 @@ class DataPrepper:
                         # print("Name: {}\n\nDesc: {}\n".format(hit['_source']['name'], hit['_source']['shortDescription']))
 
                     #print("\tQ[%s]: %s clicked" % (query_id, total_clicked_docs_per_query))
+                elif response and (
+                    response['hits']['hits'] is None
+                    or len(response['hits']['hits']) == 0
+                ):
+                    print("No results for query: %s" % key)
+                    no_results.add(key)
                 else:
-                    if response and (response['hits']['hits'] == None or len(response['hits']['hits']) == 0):
-                        print("No results for query: %s" % key)
-                        no_results.add(key)
-                    else:
-                        print(response)
-                        print("Invalid response for query %s" % query_obj)
+                    print(response)
+                    print("Invalid response for query %s" % query_obj)
         print("Zero results queries: %s" % no_results)
         impressions_df = pd.DataFrame({
             "query_id": query_ids_list,
@@ -191,12 +193,10 @@ class DataPrepper:
         feature_frames = []
         query_gb = train_data_df.groupby("query")
         no_results = {}
-        ctr = 0
         #print("Number queries: %s" % query_gb.count())
-        for key in query_gb.groups.keys():
+        for ctr, key in enumerate(query_gb.groups.keys()):
             if ctr % 500 == 0:
                 print("Progress[%s]: %s" % (ctr, key))
-            ctr += 1
             # get all the docs ids for this query
             group = query_gb.get_group(key)
             doc_ids = group.doc_id.values
@@ -209,9 +209,7 @@ class DataPrepper:
             if ltr_feats_df is not None:
                 feature_frames.append(ltr_feats_df)
 
-        features_df = None
-        if len(feature_frames) > 0:
-            features_df = pd.concat(feature_frames)
+        features_df = pd.concat(feature_frames) if feature_frames else None
         print("The following queries produced no results: %s" % no_results)
         return features_df
 
@@ -241,18 +239,14 @@ class DataPrepper:
             if response and response['hits']['hits'] and len(response['hits']['hits']) > 0:
                 hits = response['hits']['hits']
                 # extract the feautres based on the features passed into the Prepper
-                feature_results = {}  # key is the name of the feature from self.feature_names, value is an array of values
-                # for feature in self.feature_names: #initialize storage
-                feature_results["doc_id"] = []  # capture the doc id so we can join later
-                feature_results["query_id"] = []  # ^^^
-                feature_results["sku"] = []  # ^^^
-                for (idx, hit) in enumerate(hits):
+                feature_results = {'doc_id': [], 'query_id': [], 'sku': []}
+                for hit in hits:
                     features = hit['fields']['_ltrlog'][0]['log_entry']
                     feature_results["doc_id"].append(int(hit['_id']))
                     feature_results["sku"].append(int(hit['_source']['sku'][0]))
                     feature_results["query_id"].append(
                         int(query_id))  # super redundant, but it will make it easier to join later
-                    for feat_idx, feature in enumerate(features):
+                    for feature in features:
                         feat_name = feature.get('name')
                         feat_val = feature.get('value', 0)
                         feat_vals = feature_results.get(feat_name)
@@ -278,8 +272,7 @@ class DataPrepper:
                 # get the field
                 funcs = func_temp.get("functions",
                                       [func_temp.get("field_value_factor")])  # could also be a field_value_factor alone
-                for func in funcs:
-                    agg_fields.append(func['field_value_factor']['field'])
+                agg_fields.extend(func['field_value_factor']['field'] for func in funcs)
         stats_query = qu.create_stats_query(agg_fields)
         try:
             response = self.opensearch.search(stats_query, self.index_name)

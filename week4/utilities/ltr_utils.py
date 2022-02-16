@@ -156,13 +156,7 @@ def write_training_file(train_data, output_file, feat_map):
             features = get_features(item, exclusions, col_names)
             feat_map_file.write("0\tna\tq\n")
             for idx, feat in enumerate(features.keys()):
-                #https://docs.rs/xgboost/0.1.4/xgboost/struct.FeatureMap.html are the only docs I can find on the format
-                if feat != "onSale":
-                    feat_map_file.write('{}\t{}\tq\n'.format(idx+1,feat))#idx+2 b/c we are one-based for this
-                else: #Kludgy way of handling onSale being at some point.  For now, write it out as 'q'
-                    # Bug in LTR prevents 'indicator'/boolean features, so model as q for now by
-                    # encoding onSale as a percentage discount
-                    feat_map_file.write('{}\t{}\tq\n'.format(idx+1,feat)) #make the q an i
+                feat_map_file.write('{}\t{}\tq\n'.format(idx+1,feat))#idx+2 b/c we are one-based for this
 
 
 
@@ -197,8 +191,13 @@ def create_ltr_store(ltr_model_path, auth, delete_old=True):
 
 def post_featureset(featureset_path, ltr_feature_set, auth, headers={"Content-Type": 'application/json'}):
     print("POSTing the featureset to %s" % (featureset_path))
-    resp = requests.post(featureset_path, headers=headers, data=json.dumps(ltr_feature_set), auth=auth, verify=False)
-    return resp
+    return requests.post(
+        featureset_path,
+        headers=headers,
+        data=json.dumps(ltr_feature_set),
+        auth=auth,
+        verify=False,
+    )
 
 
 def delete_model(model_path, auth):

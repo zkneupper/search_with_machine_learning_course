@@ -23,13 +23,13 @@ def process_filters(filters_input):
     display_filters = []  # Also create the text we will use to display the filters that are applied
     applied_filters = ""
     for filter in filters_input:
-        type = request.args.get(filter + ".type")
-        display_name = request.args.get(filter + ".displayName", filter)
+        type = request.args.get(f'{filter}.type')
+        display_name = request.args.get(f'{filter}.displayName', filter)
         applied_filters += "&filter.name={}&{}.type={}&{}.displayName={}".format(filter, filter, type, filter,
                                                                                  display_name)
         if type == "range":
-            from_val = request.args.get(filter + ".from", None)
-            to_val = request.args.get(filter + ".to", None)
+            from_val = request.args.get(f'{filter}.from', None)
+            to_val = request.args.get(f'{filter}.to', None)
             print("from: {}, to: {}".format(from_val, to_val))
             # we need to turn the "to-from" syntax of aggregations to the "gte,lte" syntax of range filters.
             to_from = {}
@@ -46,8 +46,8 @@ def process_filters(filters_input):
             display_filters.append("{}: {} TO {}".format(display_name, from_val, to_val))
             applied_filters += "&{}.from={}&{}.to={}".format(filter, from_val, filter, to_val)
         elif type == "terms":
-            field = request.args.get(filter + ".fieldName", filter)
-            key = request.args.get(filter + ".key", None)
+            field = request.args.get(f'{filter}.fieldName', filter)
+            key = request.args.get(f'{filter}.key', None)
             the_filter = {"term": {field: key}}
             filters.append(the_filter)
             display_filters.append("{}: {}".format(display_name, key))
@@ -74,7 +74,29 @@ def query():
     ltr_store_name = "week2"
     ltr_model_name = "ltr_model"
     explain = False
-    if request.method == 'POST':  # a query has been submitted
+    if request.method == 'GET':
+        user_query = request.args.get("query", "*")
+        filters_input = request.args.getlist("filter.name")
+        sort = request.args.get("sort", sort)
+        sortDir = request.args.get("sortDir", sortDir)
+        explain_val = request.args.get("explain", "false")
+        click_prior = get_click_prior(user_query)
+        if explain_val == "true":
+            explain = True
+        if filters_input:
+            (filters, display_filters, applied_filters) = process_filters(filters_input)
+        model = request.args.get("model", "simiple")
+        if model == "simple_LTR":
+            query_obj = qu.create_simple_baseline(user_query, click_prior, filters, sort, sortDir, size=500)
+            query_obj = lu.create_rescore_ltr_query(user_query, query_obj, click_prior, ltr_model_name, ltr_store_name, rescore_size=500)
+        elif model == "ht_LTR":
+            query_obj = qu.create_query(user_query, click_prior, filters, sort, sortDir, size=100)
+            query_obj = lu.create_rescore_ltr_query(user_query, query_obj, click_prior, ltr_model_name, ltr_store_name, rescore_size=100)
+        elif model == "hand_tuned":
+            query_obj = qu.create_query(user_query, click_prior, filters, sort, sortDir, size=100)
+        else:
+            query_obj = qu.create_simple_baseline(user_query, click_prior, filters, sort, sortDir, size=100)
+    elif request.method == 'POST':
         user_query = request.form['query']
         if not user_query:
             user_query = "*"
@@ -106,28 +128,6 @@ def query():
         else:
             query_obj = qu.create_simple_baseline(user_query, click_prior, [], sort, sortDir, size=100)  # We moved create_query to a utility class so we could use it elsewhere.
             print("Plain ol q: %s" % query_obj)
-    elif request.method == 'GET':  # Handle the case where there is no query or just loading the page
-        user_query = request.args.get("query", "*")
-        filters_input = request.args.getlist("filter.name")
-        sort = request.args.get("sort", sort)
-        sortDir = request.args.get("sortDir", sortDir)
-        explain_val = request.args.get("explain", "false")
-        click_prior = get_click_prior(user_query)
-        if explain_val == "true":
-            explain = True
-        if filters_input:
-            (filters, display_filters, applied_filters) = process_filters(filters_input)
-        model = request.args.get("model", "simiple")
-        if model == "simple_LTR":
-            query_obj = qu.create_simple_baseline(user_query, click_prior, filters, sort, sortDir, size=500)
-            query_obj = lu.create_rescore_ltr_query(user_query, query_obj, click_prior, ltr_model_name, ltr_store_name, rescore_size=500)
-        elif model == "ht_LTR":
-            query_obj = qu.create_query(user_query, click_prior, filters, sort, sortDir, size=100)
-            query_obj = lu.create_rescore_ltr_query(user_query, query_obj, click_prior, ltr_model_name, ltr_store_name, rescore_size=100)
-        elif model == "hand_tuned":
-            query_obj = qu.create_query(user_query, click_prior, filters, sort, sortDir, size=100)
-        else:
-            query_obj = qu.create_simple_baseline(user_query, click_prior, filters, sort, sortDir, size=100)
     else:
         query_obj = qu.create_query("*", "", [], sort, sortDir, size=100)
 

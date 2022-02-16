@@ -4,7 +4,7 @@ from pathlib import Path
 
 def transform_training_data(title, comment):
     # IMPLEMENT
-    return title + ' ' + comment
+    return f'{title} {comment}'
 
 
 # Directory for review data

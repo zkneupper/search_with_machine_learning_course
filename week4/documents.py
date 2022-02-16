@@ -13,9 +13,7 @@ bp = Blueprint('documents', __name__, url_prefix='/documents')
 
 # Take in a JSON document and return a JSON document
 @bp.route('/annotate', methods=['POST'])
-
 def annotate():
     if request.mimetype == 'application/json':
-        the_doc = request.get_json()
-        return the_doc
+        return request.get_json()
     abort(415)

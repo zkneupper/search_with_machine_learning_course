@@ -20,18 +20,12 @@ def process_filters(filters_input):
     display_filters = []  # Also create the text we will use to display the filters that are applied
     applied_filters = ""
     for filter in filters_input:
-        type = request.args.get(filter + ".type")
-        display_name = request.args.get(filter + ".displayName", filter)
+        type = request.args.get(f'{filter}.type')
+        display_name = request.args.get(f'{filter}.displayName', filter)
         #
         # We need to capture and return what filters are already applied so they can be automatically added to any existing links we display in aggregations.jinja2
         applied_filters += "&filter.name={}&{}.type={}&{}.displayName={}".format(filter, filter, type, filter,
                                                                                  display_name)
-        #TODO: IMPLEMENT AND SET filters, display_filters and applied_filters.
-        # filters get used in create_query below.  display_filters gets used by display_filters.jinja2 and applied_filters gets used by aggregations.jinja2 (and any other links that would execute a search.)
-        if type == "range":
-            pass
-        elif type == "terms":
-            pass #TODO: IMPLEMENT
     print("Filters: {}".format(filters))
 
     return filters, display_filters, applied_filters
@@ -50,7 +44,16 @@ def query():
     filters = None
     sort = "_score"
     sortDir = "desc"
-    if request.method == 'POST':  # a query has been submitted
+    if request.method == 'GET':
+        user_query = request.args.get("query", "*")
+        filters_input = request.args.getlist("filter.name")
+        sort = request.args.get("sort", sort)
+        sortDir = request.args.get("sortDir", sortDir)
+        if filters_input:
+            (filters, display_filters, applied_filters) = process_filters(filters_input)
+
+        query_obj = create_query(user_query, filters, sort, sortDir)
+    elif request.method == 'POST':
         user_query = request.form['query']
         if not user_query:
             user_query = "*"
@@ -61,24 +64,15 @@ def query():
         if not sortDir:
             sortDir = "desc"
         query_obj = create_query(user_query, [], sort, sortDir)
-    elif request.method == 'GET':  # Handle the case where there is no query or just loading the page
-        user_query = request.args.get("query", "*")
-        filters_input = request.args.getlist("filter.name")
-        sort = request.args.get("sort", sort)
-        sortDir = request.args.get("sortDir", sortDir)
-        if filters_input:
-            (filters, display_filters, applied_filters) = process_filters(filters_input)
-
-        query_obj = create_query(user_query, filters, sort, sortDir)
     else:
         query_obj = create_query("*", [], sort, sortDir)
 
     print("query obj: {}".format(query_obj))
-    response = None   # TODO: Replace me with an appropriate call to OpenSearch
     # Postprocess results here if you so desire
 
     #print(response)
     if error is None:
+        response = None   # TODO: Replace me with an appropriate call to OpenSearch
         return render_template("search_results.jinja2", query=user_query, search_response=response,
                                display_filters=display_filters, applied_filters=applied_filters,
                                sort=sort, sortDir=sortDir)
@@ -88,13 +82,12 @@ def query():
 
 def create_query(user_query, filters, sort="_score", sortDir="desc"):
     print("Query: {} Filters: {} Sort: {}".format(user_query, filters, sort))
-    query_obj = {
+    return {
         'size': 10,
         "query": {
-            "match_all": {} # Replace me with a query that both searches and filters
+            "match_all": {}  # Replace me with a query that both searches and filters
         },
         "aggs": {
-            #TODO: FILL ME IN
-        }
+            # TODO: FILL ME IN
+        },
     }
-    return query_obj

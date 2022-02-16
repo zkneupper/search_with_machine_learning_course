@@ -12,11 +12,10 @@ import json
 bp = Blueprint('documents', __name__, url_prefix='/documents')
 
 def get_entities(named_entities, entity_types=["ORGANIZATION", "PERSON", "NNP"]):
-    result = ""
     for ent in named_entities:  # two cases: we have a NNP or we have a tree
         print("IMPLEMENT_ME: get_entities")
 
-    return result
+    return ""
 
 # Take in a JSON document and return a JSON document
 @bp.route('/annotate', methods=['POST'])
