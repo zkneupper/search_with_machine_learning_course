@@ -80,8 +80,49 @@ def create_feature_log_query(
     size=200,
     terms_field="_id",
 ):
-    print("IMPLEMENT ME: create_feature_log_query")
-    return None
+    # print("IMPLEMENT ME: create_feature_log_query")
+    # return None
+    # Reference: https://elasticsearch-learning-to-rank.readthedocs.io/en/latest/logging-features.html
+
+    doc_ids_str_list = [str(i) for i in doc_ids]
+    filter_terms = {"terms": {terms_field: doc_ids_str_list}}
+
+    filter_sltr = {
+        "sltr": {
+            "_name": "logged_featureset",
+            "featureset": featureset_name,
+            "store": ltr_store_name,
+            "params": {
+                "keywords": query,
+                "click_prior_query": click_prior_query,
+            },
+        }
+    }
+
+    query_query = {
+        "bool": {
+            "filter": [
+                filter_terms,
+                filter_sltr,
+            ]
+        }
+    }
+
+    query_extension = {
+        "ltr_log": {
+            "log_specs": {
+                "name": "features",
+                "named_query": "logged_featureset",
+            }
+        }
+    }
+
+    query_obj = {
+        "query": query_query,
+        "ext": query_extension,
+    }
+
+    return query_obj
 
 
 # Item is a Pandas namedtuple
