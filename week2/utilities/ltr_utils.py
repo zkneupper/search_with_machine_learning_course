@@ -17,6 +17,35 @@ def create_rescore_ltr_query(
     # Create the base query, use a much bigger window
     # add on the rescore
     print("IMPLEMENT ME: create_rescore_ltr_query")
+    # References:
+    # * https://elasticsearch-learning-to-rank.readthedocs.io/en/latest/logging-features.html
+    # * https://elasticsearch-learning-to-rank.readthedocs.io/en/latest/searching-with-your-model.html
+
+    sltr = {
+        "sltr": {
+            "params": {"keywords": user_query, "click_prior_query": click_prior_query},
+            "model": ltr_model_name,
+            # Since we are using a named store, as opposed to simply '_ltr', we need to pass it in
+            "store": ltr_store_name,
+        }
+    }
+
+    if active_features:
+        sltr["active_features"] = active_features
+        # sltr["sltr"]["active_features"] = active_features
+
+    query_rescore_query = {
+        "rescore_query": sltr,
+        "score_mode": "total",
+        "query_weight": main_query_weight,
+        "rescore_query_weight": rescore_query_weight,
+    }
+
+    query_obj["rescore"] = {
+        "window_size": rescore_size,
+        "query": query_rescore_query,
+    }
+
     return query_obj
 
 
@@ -39,8 +68,10 @@ def create_sltr_simple_query(
             "store": ltr_store_name,
         }
     }
-    if active_features is not None and len(active_features) > 0:
+    if active_features:
         sltr["active_features"] = active_features
+        # sltr["sltr"]["active_features"] = active_features
+
     query_obj["query"]["bool"]["should"].append(sltr)
     return query_obj, len(query_obj["query"]["bool"]["should"])
 
@@ -63,8 +94,10 @@ def create_sltr_hand_tuned_query(
             "store": ltr_store_name,
         }
     }
-    if active_features is not None and len(active_features) > 0:
+    if active_features:
         sltr["active_features"] = active_features
+        # sltr["sltr"]["active_features"] = active_features
+
     query_obj["query"]["function_score"]["query"]["bool"]["should"].append(sltr)
     return query_obj, len(
         query_obj["query"]["function_score"]["query"]["bool"]["should"]
