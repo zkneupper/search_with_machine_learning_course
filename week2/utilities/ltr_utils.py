@@ -16,7 +16,7 @@ def create_rescore_ltr_query(
 ):
     # Create the base query, use a much bigger window
     # add on the rescore
-    print("IMPLEMENT ME: create_rescore_ltr_query")
+    # print("IMPLEMENT ME: create_rescore_ltr_query")
     # References:
     # * https://elasticsearch-learning-to-rank.readthedocs.io/en/latest/logging-features.html
     # * https://elasticsearch-learning-to-rank.readthedocs.io/en/latest/searching-with-your-model.html
