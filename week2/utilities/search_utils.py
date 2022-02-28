@@ -502,17 +502,14 @@ def compare_explains(
         )
         if click_prior_query is None or click_prior_query == "":
             num_shoulds += 1  # if click prior is empty, then num shoulds will always be one less than a query with a valid click prior, which will throw off our parallel arrays
-        # print("Explain query %s" % query_obj)
-        response = opensearch.explain(index, item.sku, body=query_obj)
-        # get the top level scores by description
-        if response:
+        if response := opensearch.explain(index, item.sku, body=query_obj):
             details = response["explanation"]["details"]
             query.append(item.query)
             sku.append(item.sku)
             scores.append(response["explanation"]["value"])
             for idx, val in enumerate(details):
                 feat_name = "clause_%s" % idx
-                arry = results.get(feat_name, None)
+                arry = results.get(feat_name)
                 if arry is None:
                     arry = []
                     results[feat_name] = arry
@@ -524,7 +521,7 @@ def compare_explains(
                     for ltr_detail in ltr_details:
                         #'description': 'Feature 2(manufacturer_match): [no match, default value 0.0 used]',
                         feat_name = ltr_detail["description"].split(":")[0]
-                        arry = results.get(feat_name, None)
+                        arry = results.get(feat_name)
                         if arry is None:
                             arry = []
                             results[feat_name] = arry
@@ -534,20 +531,19 @@ def compare_explains(
             ):  # this means not all clauses had explanations
                 for i in range(len(details), num_shoulds):
                     feat_name = "clause_%s" % i
-                    arry = results.get(feat_name, None)
+                    arry = results.get(feat_name)
                     if arry is None:
                         arry = []
                         results[feat_name] = arry
                     arry.append(0)
         else:
             print("No response for q: %s & sku: %s" % (item.query, item.sku))
-    results_df = pd.DataFrame(results)
-    return results_df
+    return pd.DataFrame(results)
 
 
 def get_feat_names(details):
     feat_names = set()
-    for idx, val in enumerate(details):
+    for val in details:
         if val["description"].find("LtrModel:") >= 0:
             ltr_details = val["details"]
             for ltr_detail in ltr_details:
