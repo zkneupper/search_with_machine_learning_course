@@ -5,9 +5,7 @@ def create_stats_query(aggs, extended=True):
     print("Creating stats query from %s" % aggs)
     agg_map = {}
     agg_obj = {"aggs": agg_map, "size": 0}
-    stats_type = "stats"
-    if extended:
-        stats_type = "extended_stats"
+    stats_type = "extended_stats" if extended else "stats"
     for agg in aggs:
         agg_map[agg] = {stats_type: {"field": agg}}
     return agg_obj
@@ -36,7 +34,7 @@ def create_prior_queries(
     click_prior_query = ""
     # Create a string that looks like:  "query": "1065813^100 OR 8371111^89", where the left side is the doc id and the right side is the weight.  In our case, the number of clicks a document received in the training set
     if doc_ids is not None and doc_id_weights is not None:
-        for idx, doc in enumerate(doc_ids):
+        for doc in doc_ids:
             try:
                 wgt = doc_id_weights[
                     doc
@@ -134,7 +132,7 @@ def create_simple_baseline(
             }
         )
         # print(query_obj)
-    if user_query == "*" or user_query == "#":
+    if user_query in ["*", "#"]:
         # replace the bool
         try:
             query_obj["query"].pop("bool")
@@ -268,7 +266,7 @@ def create_query(
             }
         )
         # print(query_obj)
-    if user_query == "*" or user_query == "#":
+    if user_query in ["*", "#"]:
         # replace the bool
         try:
             query_obj["query"].pop("bool")
